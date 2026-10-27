@@ -1,7 +1,8 @@
 package com.uniajc.modelo;
 
 public class Estudiante {
- private int idEstudiante;
+
+private int idEstudiante;
     private String nombre;
     private String apellido;
     private String email;
