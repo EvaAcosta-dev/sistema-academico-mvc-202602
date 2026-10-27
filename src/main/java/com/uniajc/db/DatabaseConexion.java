@@ -1,60 +1,54 @@
 package com.uniajc.db;
-
-// 1. Importar las clases necesarias de JDBC
-import java.sql.DriverManager; // Importar la clase DriverManager para gestionar la conexión con la base de datos
-import java.sql.Connection; // Importar la clase Connection para establecer la conexión con la base de datos
-import java.sql.SQLException; // Importar la clase SQLException para manejar errores de conexión
-
-// Otras importaciones necesarias para gestionar archivos de propiedades
-import java.io.File; // Importar la clase File para manejar archivos
-import java.io.FileInputStream; // Importar la clase FileInputStream para leer archivos de propiedades
-import java.io.FileNotFoundException; // Importar la clase FileNotFoundException para manejar errores de archivo no encontrado
-import java.io.IOException; // Importar la clase IOException para manejar errores de entrada/salida
-
-import java.util.Properties; // Importar la clase Properties para manejar archivos de propiedades
+import java.sql.DriverManager;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.Properties;
 
 public class DatabaseConexion {
     // Conexión única (singleton)
     private static Connection connection = null;
 
     /**
-     * Obtiene la conexión a la base de datos. Si no existe, la crea usando
-     * config.properties.
-     * 
+     * Obtiene la conexión a la base de datos. Si no existe o fue cerrada, la crea usando config.properties.
      * @return Objeto Connection listo para usar.
      */
     public static Connection getConnection() {
-
         Properties properties = new Properties();
+        
+        try {
+            // Verificamos si es nula O si fue cerrada previamente
+            if (connection == null || connection.isClosed()) { 
+                try {
+                    // Cargar las propiedades desde el archivo config.properties
+                    properties.load(new FileInputStream(new File("config.properties")));
 
-        if (connection == null) {
-            try {
+                    // Leer los parámetros de conexión
+                    String url = properties.get("URL").toString();
+                    String user = properties.get("USER").toString();
+                    String password = properties.get("PASSWORD").toString();
 
-                // Cargar las propiedades desde el archivo config.properties
-                properties.load(new FileInputStream(new File("config.properties")));
+                    System.out.println("Intentando conectar a: " + url);
 
-                // Leer los parámetros de conexión
-                String url = properties.get("URL").toString();
-                String user = properties.get("USER").toString();
-                String password = properties.get("PASSWORD").toString();
-
-                System.out.println("URL =>>> " + url);
-                System.out.println("User =>>> " + user);
-                System.out.println("Password =>>> " + password);
-
-                // Establecer la conexión
-                connection = DriverManager.getConnection(url, user, password);
-                System.out.println("Conexion exitosa.");
-            } catch (SQLException error) {
-                System.out.println("Failed to establish connection. " + error.getMessage());
-            } catch (FileNotFoundException e) {
-                System.out.println("config.properties file not found.");
-                e.printStackTrace();
-            } catch (IOException e) {
-                System.out.println("Error reading config.properties file.");
-                e.printStackTrace();
+                    // Establecer la conexión
+                    connection = DriverManager.getConnection(url, user, password);
+                    System.out.println("¡Conexión exitosa!");
+                    
+                } catch (FileNotFoundException e) {
+                    System.out.println("Error: El archivo config.properties no existe.");
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    System.out.println("Error de lectura en config.properties.");
+                    e.printStackTrace();
+                }
             }
+        } catch (SQLException error) {
+            System.out.println("Error al verificar o establecer la conexión: " + error.getMessage());
         }
+        
         return connection;
     }
 
@@ -65,11 +59,34 @@ public class DatabaseConexion {
         if (connection != null) {
             try {
                 connection.close();
-                System.out.println("Connection closed successfully.");
+                connection = null; //  Reseteamos a null para que se pueda volver a conectar en el futuro
+                System.out.println("Conexión cerrada exitosamente.");
             } catch (SQLException e) {
+                System.out.println("Fallo al cerrar la conexión: " + e.getMessage());
                 e.printStackTrace();
-                System.out.println("Failed to close connection. " + e.getMessage());
             }
         }
+    }
+
+    /**
+     * Método MAIN para probar el funcionamiento de la clase
+     */
+    public static void main(String[] args) {
+        System.out.println("--- Prueba 1: Primera conexión ---");
+        Connection c1 = DatabaseConexion.getConnection();
+
+        System.out.println("\n--- Prueba 2: Intentar conectar de nuevo (Debe reusar la misma) ---");
+        Connection c2 = DatabaseConexion.getConnection();
+        System.out.println("¿Es la misma instancia de conexión? " + (c1 == c2));
+
+        System.out.println("\n--- Prueba 3: Cerrar la conexión ---");
+        DatabaseConexion.closeConnection();
+
+        System.out.println("\n--- Prueba 4: Volver a conectar después del cierre (Debe crear una nueva) ---");
+        Connection c3 = DatabaseConexion.getConnection();
+        System.out.println("¿Nueva conexión creada con éxito? " + (c3 != null));
+        
+        // Limpieza final
+        DatabaseConexion.closeConnection();
     }
 }
