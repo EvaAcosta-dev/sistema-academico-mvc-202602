@@ -1,6 +1,7 @@
 package com.uniajc.modelo;
 
 public class Estudiante {
+
 private int idEstudiante;
     private String nombre;
     private String apellido;
@@ -48,3 +49,4 @@ private int idEstudiante;
         this.email = email;
     }
 }
+
